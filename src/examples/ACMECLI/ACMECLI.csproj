@@ -15,7 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\ACMESharp\ACMESharp.csproj" />
     <ProjectReference Include="..\..\PKISharp.SimplePKI\PKISharp.SimplePKI.csproj" />
-    <ProjectReference Include="..\Examples.Common.PKI\Examples.Common.PKI.csproj" />
+    <!--<ProjectReference Include="..\Examples.Common.PKI\Examples.Common.PKI.csproj" />-->
     <ProjectReference Include="..\Examples.Common\Examples.Common.csproj" />
   </ItemGroup>
 

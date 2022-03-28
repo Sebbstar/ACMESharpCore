@@ -13,7 +13,7 @@ using ACMESharp.Crypto.JOSE;
 using ACMESharp.Protocol;
 using ACMESharp.Protocol.Resources;
 using Examples.Common;
-using Examples.Common.PKI;
+
 using McMaster.Extensions.CommandLineUtils;
 using Newtonsoft.Json;
 using PKISharp.SimplePKI;
@@ -149,12 +149,7 @@ namespace ACMECLI
                 throw new Exception("Unresolved ACME CA URL; either name or URL argument must be specified");
 
             ServiceDirectory acmeDir = default;
-            if (LoadStateInto(ref acmeDir, failThrow: false,
-                    Constants.AcmeDirectoryFile))
-            {
-                Console.WriteLine("Loaded existing Service Directory");
-                Console.WriteLine();
-            }
+          
 
             if (NameServer != null)
             {
@@ -162,27 +157,12 @@ namespace ACMECLI
             }
 
             AccountDetails account = default;
-            if (LoadStateInto(ref account, failThrow: false,
-                    Constants.AcmeAccountDetailsFile))
-            {
-                Console.WriteLine($"Loaded Account Details for KID:");
-                Console.WriteLine($"  Account KID....: {account.Kid}");
-                Console.WriteLine();
-            }
+           
 
             IJwsTool accountSigner = default;
-            ExamplesAccountKey accountKey = default;
+          //  ExamplesAccountKey accountKey = default;
             string accountKeyHash = default;
-            if (LoadStateInto(ref accountKey, failThrow: false,
-                    Constants.AcmeAccountKeyFile))
-            {
-                accountSigner = accountKey.GenerateTool();
-                accountKeyHash = ComputeHash(accountSigner.Export());
-                Console.WriteLine($"Loaded EXISTING Account Key:");
-                Console.WriteLine($"  Key Type...........: {accountKey.KeyType}");
-                Console.WriteLine($"  Key Export Hash....: {accountKeyHash}");
-                Console.WriteLine();
-            }
+           
 
             _http = new HttpClient { BaseAddress = new Uri(url), };
             _acme = new AcmeProtocolClient(_http, acmeDir, account, accountSigner, usePostAsGet: true);
@@ -191,7 +171,7 @@ namespace ACMECLI
                 Console.WriteLine("Refreshing Service Directory");
                 acmeDir = await _acme.GetDirectoryAsync();
                 _acme.Directory = acmeDir;
-                SaveStateFrom(acmeDir, Constants.AcmeDirectoryFile);
+         
                 Console.WriteLine();
             }
 
@@ -212,13 +192,12 @@ namespace ACMECLI
 
                 account = await _acme.CreateAccountAsync(Email.Select(x => "mailto:" + x), AcceptTos);
                 accountSigner = _acme.Signer;
-                accountKey = new ExamplesAccountKey
-                {
-                    KeyType = accountSigner.JwsAlg,
-                    KeyExport = accountSigner.Export(),
-                };
-                SaveStateFrom(account, Constants.AcmeAccountDetailsFile);
-                SaveStateFrom(accountKey, Constants.AcmeAccountKeyFile);
+                ////accountKey = new ExamplesAccountKey
+                ////{
+                ////    KeyType = accountSigner.JwsAlg,
+                ////    KeyExport = accountSigner.Export(),
+                ////};
+
                 _acme.Account = account;
             }
 
@@ -254,21 +233,20 @@ namespace ACMECLI
             var orderId = certNameHash;
 
             OrderDetails order = default;
-            LoadStateInto(ref order, failThrow: false,
-                    Constants.AcmeOrderDetailsFileFmt, orderId);
+          
 
             if (order == null)
             {
                 Console.WriteLine("Creating NEW Order");
                 order = await _acme.CreateOrderAsync(dnsNames);
-                SaveStateFrom(order, Constants.AcmeOrderDetailsFileFmt, orderId);
+             
             }
 
             if (RefreshOrder)
             {
                 Console.WriteLine("Refreshing EXISTING Order");
                 order = await _acme.GetOrderDetailsAsync(order.OrderUrl, existing: order);
-                SaveStateFrom(order, Constants.AcmeOrderDetailsFileFmt, orderId);
+              
             }
 
             // Dump out Order Details
@@ -311,14 +289,12 @@ namespace ACMECLI
                 {
                     var authzId = ComputeHash(authzUrl);
                     Authorization authz = default;
-                    LoadStateInto(ref authz, failThrow: false,
-                            Constants.AcmeOrderAuthzDetailsFileFmt, orderId, authzId);
-                    if (authz == null || RefreshOrder)
-                    {
+                 
+                 
                         Console.WriteLine("Getting Authorization Details...");
                         authz = await _acme.GetAuthorizationDetailsAsync(authzUrl);
-                        SaveStateFrom(authz, Constants.AcmeOrderAuthzDetailsFileFmt, orderId, authzId);
-                    }
+                      
+                    
 
                     Console.WriteLine($"Identifier: [{authz.Identifier.Value}]");
                     Console.WriteLine($"  Status.............: {authz.Status}");
@@ -353,9 +329,6 @@ namespace ACMECLI
                             case Dns01ChallengeValidationDetails.Dns01ChallengeType:
                                 await ProcessDns01(accountSigner, authz, chlngUpdated ?? chlng, cd);
                                 break;
-                            case Http01ChallengeValidationDetails.Http01ChallengeType:
-                                await ProcessHttp01(accountSigner, authz, chlngUpdated ?? chlng, cd);
-                                break;
                             default:
                                 Console.WriteLine($"  Challenge of Type: {cd.ChallengeType}");
                                 Console.WriteLine($"  This Challenge type is unknown, but here are the details:");
@@ -371,8 +344,7 @@ namespace ACMECLI
                         }
                         if (chlngUpdated != null)
                         {
-                            SaveStateFrom(chlngUpdated, Constants.AcmeOrderAuthzChlngDetailsFileFmt,
-                                    orderId, authzId, chlngUpdated.Type);
+                        
                         }
                         if (authzUpdated != null)
                         {
@@ -382,7 +354,7 @@ namespace ACMECLI
                                 AddStatusCount(authzUpdated.Status, 1);
                             }
                             authz = authzUpdated;
-                            SaveStateFrom(authz, Constants.AcmeOrderAuthzDetailsFileFmt, orderId, authzId);
+                         
                             authzUpdated = null;
                         }
                         ++chlngCount;
@@ -430,12 +402,7 @@ namespace ACMECLI
                     string certKeys = null;
                     byte[] certCsr = null;
 
-                    if (LoadStateInto(ref certKeys, failThrow: false,
-                            Constants.AcmeOrderCertKeyFmt, orderId))
-                        Console.WriteLine("Loaded existing Certificate key pair");
-                    if (LoadStateInto(ref certCsr, failThrow: false,
-                            Constants.AcmeOrderCertCsrFmt, orderId))
-                        Console.WriteLine("Loaded existing CSR");
+     
 
                     if (certKeys == null || certCsr == null || RegenerateCsr)
                     {
@@ -456,13 +423,11 @@ namespace ACMECLI
                         certKeys = Save(keyPair);
                         certCsr = csr.ExportSigningRequest(PkiEncodingFormat.Der);
 
-                        SaveStateFrom(certKeys, Constants.AcmeOrderCertKeyFmt, orderId);
-                        SaveStateFrom(certCsr, Constants.AcmeOrderCertCsrFmt, orderId);
                     }
 
                     Console.WriteLine("Finalizing Order...");
                     order = await _acme.FinalizeOrderAsync(order.Payload.Finalize, certCsr);
-                    SaveStateFrom(order, Constants.AcmeOrderDetailsFileFmt, orderId);
+                 
                 }
                 else
                 {
@@ -492,8 +457,6 @@ namespace ACMECLI
 
                             if (RefreshOrder)
                             {
-                                // If refresh was indicated, persist the latest state
-                                SaveStateFrom(order, Constants.AcmeOrderDetailsFileFmt, orderId);
                             }
 
                             if (!string.IsNullOrEmpty(order.Payload.Certificate))
@@ -506,7 +469,7 @@ namespace ACMECLI
                     }
                 }
 
-                if (RefreshCert || !StateExists(Constants.AcmeOrderCertFmt, orderId))
+                if (RefreshCert)
                 {
                     Console.WriteLine("Fetching Certificate...");
                     var certResp = await _acme.GetAsync(order.Payload.Certificate);
@@ -541,8 +504,7 @@ namespace ACMECLI
                     {
                         Console.WriteLine("...including private key in export");
                         string certKeys = default;
-                        LoadStateInto(ref certKeys, failThrow: true,
-                            Constants.AcmeOrderCertKeyFmt, orderId);
+                       
                         var keyPair = Load(certKeys);
                         privateKey = keyPair.PrivateKey;
                         if (pfxPassword == " ")
@@ -632,80 +594,7 @@ namespace ACMECLI
             Console.WriteLine();
         }
 
-        private async Task ProcessHttp01(IJwsTool accountSigner, Authorization authz,
-            Challenge chlng, IChallengeValidationDetails cd)
-        {
-            var httpCd = (Http01ChallengeValidationDetails)cd;
-            Console.WriteLine($"  Challenge of Type: [{httpCd.ChallengeType}]");
-            Console.WriteLine($"    To handle this Challenge, create a file that will respond to an HTTP request with these details:");
-            Console.WriteLine($"        HTTP Full URL.................: {httpCd.HttpResourceUrl}");
-            Console.WriteLine($"        HTTP Resource Path............: {httpCd.HttpResourcePath}");
-            Console.WriteLine($"        HTTP Resource Value...........: {httpCd.HttpResourceValue}");
-            Console.WriteLine($"        HTTP Resource Content-Type....: {httpCd.HttpResourceContentType}");
-
-            if (chlng.Status != Constants.PendingStatus)
-            {
-                Console.WriteLine($"    Challenge No Longer Pending [{chlng.Status}]");
-            }
-            else if (TestChallenges)
-            {
-                Console.WriteLine("    Testing for handling of HTTP Challenge");
-
-                while (true)
-                {
-                    string err = null;
-                    var httpValue = await HttpUtil.GetStringAsync(httpCd.HttpResourceUrl);
-                    if (string.IsNullOrEmpty(httpValue))
-                    {
-                        err = "Missing or empty HTTP response for Challenge URL";
-                    }
-                    else if (httpValue != httpCd.HttpResourceValue)
-                    {
-                        err = "HTTP response content does not match expected value for Challenge URL";
-                    }
-                    else
-                    {
-                        Console.WriteLine("        Found response:");
-                        Console.WriteLine($"          {httpValue}");
-                        Console.WriteLine("    SUCCESS!  Found expected HTTP response content for Challenge URL");
-                        // We're done
-                        break;
-                    }
-
-                    if (DateTime.Now < _testWaitUntil.GetValueOrDefault(DateTime.MinValue))
-                    {
-                        Console.WriteLine("        Last Test:  " + err);
-                        Console.WriteLine("        Waiting...");
-                        Thread.Sleep(30 * 1000);
-                        continue;
-                    }
-
-                    throw new Exception(err);
-                }
-            }
-            Console.WriteLine();
-        }
-
-        private bool StateExists(string nameFormat, params object[] nameArgs)
-        {
-            var name = string.Format(nameFormat, nameArgs);
-            var fullPath = Path.Combine(_statePath, name);
-            return File.Exists(fullPath);
-        }
-
-        private bool SaveStateFrom<T>(T value, string nameFormat, params object[] nameArgs)
-        {
-            var name = string.Format(nameFormat, nameArgs);
-            var fullPath = Path.Combine(_statePath, name);
-            var fullDir = Path.GetDirectoryName(fullPath);
-            if (!Directory.Exists(fullDir))
-                Directory.CreateDirectory(fullDir);
-
-            var ser = JsonConvert.SerializeObject(value, Formatting.Indented);
-            File.WriteAllText(fullPath, ser);
-            return true;
-        }
-
+     
         private bool SaveRaw<T>(T value, string nameFormat, params object[] nameArgs)
         {
             var name = string.Format(nameFormat, nameArgs);
@@ -731,24 +620,6 @@ namespace ACMECLI
                             nameof(value));
             }
 
-            return true;
-        }
-
-        private bool LoadStateInto<T>(ref T value, string nameFormat, params object[] nameArgs) =>
-                LoadStateInto<T>(ref value, true, nameFormat, nameArgs);
-
-        private bool LoadStateInto<T>(ref T value, bool failThrow, string nameFormat, params object[] nameArgs)
-        {
-            var name = string.Format(nameFormat, nameArgs);
-            var fullPath = Path.Combine(_statePath, name);
-            if (!File.Exists(fullPath))
-                if (failThrow)
-                    throw new Exception($"Failed to read object from non-existent path [{fullPath}]");
-                else
-                    return false;
-            
-            var ser = File.ReadAllText(fullPath);
-            value = JsonConvert.DeserializeObject<T>(ser);
             return true;
         }
 
